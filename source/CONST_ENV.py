@@ -8,8 +8,8 @@ class CONST_ENV():
     BASE_PATH = Path(__file__).resolve().parent.parent
     INFO_PATH = BASE_PATH / "data" / "info"
     DATASET_PATH = BASE_PATH / "DataSet"
-    API_KEYS_PATH = INFO_PATH / "data" / "api_keys.json"
-    LOGGING_PATH = INFO_PATH / "data" / "log"
+    API_KEYS_PATH = INFO_PATH / "api_keys.json"
+    LOGGING_PATH = BASE_PATH / "data" / "log"
     RE_DOWNLOAD_FILES_INFO_PATH = INFO_PATH / "re_download_files_info"
     CHECKING_LOGGING_PATH = LOGGING_PATH / "checking_log"
     DOWNLOAD_LOGGING_PATH = LOGGING_PATH / "download_log"

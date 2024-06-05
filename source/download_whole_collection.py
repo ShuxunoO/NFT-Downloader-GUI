@@ -12,14 +12,18 @@ import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 from urllib.request import Request, urlopen
-from utils.download_toolbox import PayloadFactory, NFTDownloader
+
 import requests
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import utils.file_io as fio
-import utils.spider_tool_box as stb
+import utils.spider_toolbox as stb
+from utils.downloading_toolbox import NFT_Downloader_for_Whole_Collection
 from CONST_ENV import CONST_ENV as ENV
-from utils.logging_factory import LoggerFactory
+
 from pathlib import Path
 from internetdownloadmanager import Downloader
+
 
 def remove_special_char(string):
     """去除字符串中的特殊字符
@@ -58,44 +62,11 @@ def get_target_collection_info(chain_type, contract_address) -> dict:
 
 
 
-def download_a_whole_collection(ranking, target_collection, save_path, process_num = 8) -> bool:
-
-    # 读取一些项目信息，用于构造下载参数
-
-    NFT_name = target_collection["contractMetadata"]["name"]
-    NFT_name = remove_special_char(NFT_name)
-    total_supply = int(target_collection["contractMetadata"]["totalSupply"])
-    candidate_format = target_collection["media"][0].get("format", "unknown")
-    contractAddress = target_collection["contract_address"][0]
-
-    # 创建存放媒体文件和JSON数据的文件夹
-    fio.check_dir(os.path.join(save_path, f"{NFT_name}/img"))
-    fio.check_dir(os.path.join(save_path, f"{NFT_name}/metadata"))
-
-    # 获取NFT项目的起始toenId
-    start = stb.get_start_file_index(contractAddress)
-    if start == None:
-        # 如果请求失败，则使用默认的start
-        start = 0
-    interval_length = 80
-
-    payloadfactory = PayloadFactory(start = start, interval_length = interval_length, total_supply = total_supply, candidate_format = candidate_format)
-    # 构造payload body
-    payload_list = payloadfactory.create_interval_tuples_with_start_len()
-
-    NFT_downloader = NFTDownloader(ranking = ranking, NFT_name = NFT_name, payload_list = payload_list, contractAddress = contractAddress, candidate_format = candidate_format, save_path = save_path, process_num = process_num)
-
-    print(f"\n**********  ##Ranking:{ranking}-{NFT_name}## starts Download...  **********\n")
-    flag = NFT_downloader.download_media_and_metadata()
-    return flag
-
-
 
 if __name__ == "__main__":
 
-    flag = download_a_whole_collection(ranking = str(ranking), target_collection=target_collection, save_path=save_path, process_num = process_num)
-
-    # 如果顺利下载完成 的信息写进记录文件
-    if flag:
-        download_record["have_download_phase_3"].update({str(ranking): NFT_name})
-        fio.save_json(ENV.DOWNLOAD_LOGGING_PATH, "_download_record", download_record)
+    NFT_downloader = NFT_Downloader_for_Whole_Collection(chain_type="Ethereum",
+                                                        contract_address="0x495f947276749ce646f68ac8c248420045cb7b5e",
+                                                        save_path=ENV.DATASET_PATH,
+                                                        process_num=8)
+    NFT_downloader.download_media_and_metadata()

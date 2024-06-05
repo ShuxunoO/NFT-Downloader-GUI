@@ -8,18 +8,348 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from urllib.request import Request, urlopen
+from abc import ABC, abstractmethod
+from pathlib import Path
 
-import ipfshttpclient
+
 import requests
 import utils.file_io as fio
-import utils.spider_tool_box as stb
+import utils.spider_toolbox as stb
 from internetdownloadmanager import Downloader
 from tqdm import tqdm
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from CONST_ENV import CONST_ENV as ENV
+from source.CONST_ENV import CONST_ENV as ENV
 
+
+# 定义一个NFT下载器类的通用接口类，使用不同平台的下载器类继承这个接口类
+class NFT_Downloader(ABC):
+
+    def __init__(self,  
+                chain_type: str,
+                NFT_name: str,
+                contract_address: str,
+                candidate_format: str,
+                save_path: str,
+                process_num: int,
+                thread_num: int,
+                total_supply = 0):
+
+        self.chain_type = chain_type
+        self.NFT_name = NFT_name
+        self.contract_address = contract_address
+        self.candidate_format = candidate_format
+        self.save_path = Path(save_path)
+        self.process_num = process_num
+        self.thread_num = thread_num
+        self.total_supply = total_supply
+
+
+    # 生成payload的抽象方法，生成不同平台的payload
+    @abstractmethod
+    def generate_payload(self, *args, **kwargs):
+
+        pass
+
+    # 定义单个下载进程的抽象方法
+    @abstractmethod
+    def single_process_worker(self,  *args, **kwargs) -> None:
+        pass
+
+    # 定义解析响应的抽象方法
+    @abstractmethod
+    def parse_response(self, response) -> dict:
+        pass
+
+    # 定义下载media资源的抽象方法，因为不同平台的media资源下载方式不同
+    # 并且都是以链接的形式给到
+    @abstractmethod
+    def media_downloader(self,  *args, **kwargs) -> None:
+        pass
+    
+    # 定义媒体下载器的单个工作线程的方法,不强制要求实现
+    def media_downloader_worker(self, *args, **kwargs) -> None:
+        pass
+
+    # 定义使用资源链接的形式下载metadata的方法
+    def metadata_downloader(self, *args, **kwargs) -> None:
+        pass
+
+    #使用请求中返回的metadata数据批量保存metadata
+    def save_metadata_batch(self, metadata):
+        pass
+    
+    #定义下载metadata的单个工作线程的方法，不强制要求实现
+    def metadata_downloader_worker(self, *args, **kwargs) -> None:
+        pass
+
+
+# 定义下载整个NFT项目的下载器类，继承NFT_Downloader接口类
+class NFT_Downloader_for_Whole_Collection(NFT_Downloader):
+
+    def __init__(self,
+                chain_type: str,
+                NFT_name: str,
+                contract_address: str,
+                candidate_format: str,
+                save_path: str,
+                process_num = 8,
+                thread_num = 10,
+                total_supply = 0,
+                start_index = 0):
+
+        super().__init__(chain_type, NFT_name, contract_address, candidate_format, save_path, process_num, thread_num, total_supply)
+        self.start_index = start_index
+        self.payload_list = None
+
+    def download_media_and_metadata(self):
+        # 启用进程池多进程下载
+        try:
+            with mp.Pool(processes = self.process_num) as pool:
+                pool.map(self.single_process_worker, self.payload_list)
+            pool.close()
+            pool.join()
+        except Exception as e:
+            print(f"\nError downloading Ranking: {self.NFT_name} Process startup failed: {e}\n")
+            return False
+
+        print(f"\n**********  ##Ranking:{self.NFT_name}## Download finished! **********\n")
+        return True
+
+    @abstractmethod
+    def generate_payload(self, *args, **kwargs):
+        pass
+
+
+# 基于Alchemy V3 API的NFT下载器类
+class NFT_Downloader_for_Whole_Collection_Alchemy(NFT_Downloader_for_Whole_Collection):
+    """
+    基于Alchemy V3 API的NFT下载器类，完整下载一整个NFT项目
+    细节参考链接：https://docs.alchemy.com/reference/getnftsforcontract-v3
+
+    """
+
+    def __init__(self,
+                chain_type: str,
+                NFT_name: str,
+                contract_address: str,
+                candidate_format: str,
+                save_path: str,
+                process_num = 8,
+                thread_num = 10,
+                total_supply = 0,
+                start_index = 0):
+
+        super().__init__(chain_type, NFT_name, contract_address, candidate_format, save_path, process_num, thread_num, total_supply, start_index)
+        # 生成下载资源payload list
+        self.payload_list = self.generate_payload(candidate_format = candidate_format,
+                                                    start_index = start_index,
+                                                    total_supply = total_supply)
+
+    def generate_payload(self, *args, **kwargs):
+        """
+        生成下载资源payload list
+
+        Args:
+            *args: 可变参数
+            **kwargs: 关键字参数
+
+        """
+
+        # 从参数中解析实例化PayloadFactory所需参数candidate_format，start_index，total_supply
+        candidate_format = kwargs.get("candidate_format", self.candidate_format)
+        start_index = kwargs.get("start_index", 0)
+        total_supply = kwargs.get("total_supply", 0)
+
+        # 实例化PayloadFactory
+        payloadfactory = PayloadFactory(candidate_format = candidate_format, start = start_index, interval_length = 80, total_supply = total_supply)
+
+        self.payload_list = payloadfactory.create_interval_tuples_with_start_len()
+
+    # 定义单个下载进程的方法
+    def single_process_worker(self, payload):
+        # 1. 获取请求参数
+        start, interval_length = payload
+
+        time.sleep(random.randint(1, 3))  # 增加请求间隔
+        try:
+            # 发送请求
+            # 随机选择一个api
+            api = stb.get_random_api("Alchemy")
+
+            url = f"https://eth-mainnet.g.alchemy.com/nft/v3/{api}/getNFTsForContract?contractAddress={self.contract_address}&withMetadata=true&startToken={start}&limit={interval_length}"
+            headers = stb.get_headers()
+            response = requests.get(url, headers=headers)
+        except Exception as e:
+            print(f" {self.NFT_name} Error encountered: {e}")
+        else:
+            # 4. 解析数据
+            if response.status_code == 200:
+                response_data = self.parse_response(response)
+                # 启动多进程同时进行两个任务
+                metadata_source = response_data["metadata_source"]
+                media_source = response_data["media_source"]
+                self.save_metadata_batch(metadata=metadata)
+                self.media_downloader(img_urls=media_source)
+
+            else:
+                print(f"{self.NFT_name} Error: {response.status_code}")
+
+    def parse_response(self, response):
+        """
+        从响应中解析数据。
+
+        Args:
+            response (Http response): HTTP响应数据
+
+        Returns:
+            dict: 返回解析后的数据，包括metadata资源和media资源
+        """
+        metadata_dict = {}
+        metadata_source = {}
+        media_source = {}
+
+        NFT_list = response.json()["nfts"]
+        for NFT_item in NFT_list:
+            try:
+                tokenId = NFT_item.get("tokenId")
+
+                # 解析metadata资源
+                """
+                {
+                    "tokenId": {
+                        "raw": metadata,
+                        "tokenUri": tokenUri
+                    },
+                    ……
+                }
+                
+                
+                """
+                metadata_source[tokenId] = {
+                    "raw" : NFT_item["raw"].get("metadata", None),
+                    "tokenUri" : NFT_item.get("tokenUri", None)
+                    }
+
+                # 解析media资源
+                if NFT_item.get("image", None):
+                    image = NFT_item.get("image")
+                else:
+                    # 如果没有image字段，跳过这个NFT
+                    continue
+
+                # 将媒体资源统一成一种通用的表达方式
+                """
+                {
+                    "tokenId": {
+                        "source_list": [url1, url2, url3, ...],
+                        "format": ".png"
+                },
+                ……
+
+                }
+                
+
+                """
+                source_list = []
+                for source_item in ["cachedUrl", "pngUrl", "originalUrl", "thumbnailUrl"]:
+                    # 如果字段不为空，添加到source_list中
+                    link = image.get(source_item, None)
+                    if link:
+                        source_list.append(link)
+                
+                # 解析文件格式
+                temp_format = image.get("contentType", None)
+                if temp_format == None:
+                    format = self.candidate_format
+                elif temp_format == "svg+xml":
+                    format = ".svg"
+                else:
+                    format = f".{temp_format.split('/')[-1]}"
+
+                media_source[tokenId] = {"source_list": source_list,
+                                        "format": format}
+
+            except Exception as e:
+                # 抛出异常，跳过这个NFT
+                print(f"Response parsing exception: {e}. Skipping")
+                continue
+
+        metadata_dict["metadata_source"] = metadata_source
+        metadata_dict["media_source"] = media_source
+        return metadata_dict
+
+    
+    def media_downloader(self, media_source) -> None:
+        # 启用多线程下载图片
+        with ThreadPoolExecutor(max_workers = self.thread_num) as executor:
+            executor.map(self.media_downloader_worker, media_source.items())
+            # 等待所有线程完成
+            executor.shutdown(wait=True)
+
+    def media_downloader_worker(self, source_item) -> None:
+        """
+        启用idm下载图片
+
+        Args:
+            url_item (dict): 图片的资源字典, key 为 tokenId, value 为 url资源字典
+        """
+
+        key, value = source_item
+        base_path = self.save_path.joinpath(f"{self.NFT_name}/img")
+
+        # 遍历source_list中的所有链接，下载成功即退出
+        for source_url in value["source_list"]:
+            
+            # 尝试拿到文件格式
+            file_format = stb.get_file_format(source_url)
+            if file_format == None:
+                file_format = value["format"] 
+            
+            file_path = base_path.joinpath(f"{key}{file_format}")
+            downloader = Downloader()
+            try:
+                downloader.download(url=source_url, path=file_path)
+                print(f"{self.NFT_name} Media {file_path.name} downloaded successfully.")
+                return  # 如果成功，则退出方法
+            except Exception as e:
+                print(f"Error downloading image {key} from {source_url}: {e}")
+
+    def metadata_downloader(self, metadata_source) -> None:
+        # 启用多线程下载图片
+        with ThreadPoolExecutor(max_workers = self.thread_num) as executor:
+            executor.map(self.metadata_downloader_worker, metadata_source.items())
+            # 等待所有线程完成
+            executor.shutdown(wait=True)
+
+    def metadata_downloader_worker(self, source_item) -> None:
+        """下载metadata文件
+
+        Args:
+            source_item (dict): metadata资源字典, key 为 tokenId, value 为 json文件和 url资源字典
+
+        Returns:
+            None:
+        """
+        key, value = source_item
+        base_path = self.save_path.joinpath(f"{self.NFT_name}/metadata")
+        file_path = base_path.joinpath(f"{key}.json")
+
+        # 如果raw字段里存在metadata，直接保存
+        if value["raw"].get("metadata", None):
+            fio.save_json(file_path, value["raw"]["metadata"])
+            print(f"{self.NFT_name} Metadata {file_path.name} saved successfully.")
+
+        # 如果tokenUri字段不为空，下载tokenUri指向的json文件
+        if value["tokenUri"]:
+            # 使用idm下载
+            downloader = Downloader()
+            try:
+                downloader.download(url = value["tokenUri"], path = file_path)
+                print(f"{self.NFT_name} Metadata {file_path.name} downloaded successfully.")
+            except Exception as e:
+                print(f"Error downloading metadata {file_path.name} from {value['tokenUri']}: {e}")
 
 class NFTDownloader:
     """
@@ -85,13 +415,6 @@ class NFTDownloader:
                 img_urls = response_data["img_url"]
                 self.save_metadata_batch(metadata=metadata)
                 self.download_medias(img_urls=img_urls)
-
-                # metadata_save_process = mp.Process(target=self.save_metadata_batch, args=(metadata,))
-                # media_download_process = mp.Process(target=self.download_medias, args=(img_urls,))
-                # metadata_save_process.start()
-                # media_download_process.start()
-                # metadata_save_process.join()
-                # media_download_process.join()
 
             else:
                 print(f"{self.NFT_name} Error: {response.status_code}")
@@ -221,8 +544,14 @@ class NFTDownloader:
                 self.save_metadata_batch(metadata=metadata)
 
 
+# 用于生成payload的工厂类，可以根据需要生成不同的NFT资源payload
 class PayloadFactory:
-    def __init__(self,  candidate_format: str, start=0, interval_length=80, total_supply=0):
+    def __init__(self,
+                candidate_format: str,
+                start=0,
+                interval_length=80,
+                total_supply=0):
+
         self.start = start
         self.interval_length = interval_length
         self.total_supply = total_supply
@@ -977,3 +1306,5 @@ def download_missing_metadata(target_collection, missing_list, save_path):
     except Exception as e:
         print(f"Error downloading {NFT_name}进程开启失败！: {e}")
     print("********** Download finished! **********")
+
+

@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 
 
 def check_dir(dir_path):
@@ -7,13 +8,11 @@ def check_dir(dir_path):
     检查文件夹路径是否存在，不存在则创建
 
     Args:
-        dir_path (str): 待检查的文件夹路径
+        dir_path (Path obj): 待检查的文件夹路径
     """
-    if not os.path.exists(dir_path):
-        try:
-            os.makedirs(dir_path)
-        except Exception as e:
-            raise e
+    if not Path(dir_path).exists():
+        Path(dir_path).mkdir(parents=True, exist_ok=True)
+
 
 
 def save_json(file_path, data):

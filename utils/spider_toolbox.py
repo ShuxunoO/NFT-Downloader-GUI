@@ -1,30 +1,32 @@
-from CONST_ENV import CONST_ENV as ENV
 import json
 import os
 import random
 import sys
 import requests
 import utils.file_io as fio
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from user_agent import generate_user_agent
+
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from source.CONST_ENV import CONST_ENV as ENV
 
-
-def get_random_Alchemy_api() -> str:
+def get_api(key_type: str) -> str:
     """
-    从api_keys中随机选择一个api
+    获取API密钥
 
-    :param api_keys: 包含api的列表
+    Args:
+        kry_type (str): API密钥类型
 
-    :return: 一个api
-
+    Returns:
+            str: API密钥
     """
     # 加载api key
     api_keys = fio.load_json(os.path.join(ENV.INFO_PATH, "api_keys.json"))
-    api_list = api_keys["Alchemy"]
-    return random.choice(api_list)
+    api = api_keys["key_type"]
+    if type(api) == list:
+        return random.choice(api)
+    else:
+        return api
+
 
 
 def get_random_user_agent() -> str:
