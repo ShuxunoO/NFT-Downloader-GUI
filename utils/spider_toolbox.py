@@ -135,172 +135,6 @@ def get_headers() -> dict:
     return headers
 
 
-def create_interval_tuples(start: int, interval_length: int, totalSupply: int) -> list:
-    """
-    使用给定的间隔和结束值创建一个区间元组列表。
-
-    :param interval: 区间值，整数。
-    :param totalSupply: 结束值，整数。
-    :return: 一个区间元组列表。
-    """
-    result = []
-    while start < totalSupply:
-        result.append((start, min(start + interval_length, totalSupply)))
-        start += interval_length
-    return result
-
-def create_interval_tuples_for_getNFTsForCollection(start: int, interval_length: int, totalSupply: int) -> list:
-    """
-    使用给定的间隔和结束值创建一个区间元组列表, 列表中的元素形式为（区间开始，区间间隔）。
-
-    :param interval: 区间值，整数。
-    :param totalSupply: 区间结束值，整数。
-    :return: 一个区间元组列表。
-    """
-    result = []
-    while start < totalSupply:
-        if start + interval_length < totalSupply:
-            result.append((start, interval_length))
-        else:
-            result.append((start, totalSupply - start + 1))
-        start += interval_length 
-    return result
-
-
-def generate_payload_for_a_collection(download_range, contractAddress) -> dict:
-    """
-    生成负载，用于下载一个合约的全部NFT
-    Args:
-        download_range (tuple): 要下载的区间
-        contractAddress (str): 要下载的合约地址
-
-        Returns:
-            dict: 负载
-    """
-    start, end = download_range
-    tokens = []
-    for index in range(start, end+1):
-        tokens.append({
-            "contractAddress": contractAddress,
-            "tokenId": str(index)
-        })
-    payload = {
-        "tokens": tokens,
-        "refreshCache": True
-    }
-    return payload
-
-def payload_factory_a_collection(start, totalSupply, interval_length, contractAddress) -> list:
-    """负载生成器，用于下载一个合约的全部NFT
-
-    Args:
-        totalSupply (int): 声明一共要下载多少个NFT
-        contractAddress (_type_): 要下载NFT的合约地址
-
-    Returns:
-        list: 负载列表
-    """
-    task_list = create_interval_tuples(start, interval_length, totalSupply)
-    payload_list = []
-    for task in task_list:
-        payload_body = generate_payload_for_a_collection(task, contractAddress)
-        payload_list.append(payload_body)
-    return payload_list
-
-
-def create_tasks_for_missing_nft(missing_list: list[int], interval_length: int = 50) -> list[list[int]]:
-    """
-    使用给定的间隔和结束值将 missing_list 划分为子列表。
-
-    Args:
-    :param interval_length: 区间值，整数。
-    :param missing_list: 结束值，整数。
-
-    :return: 一个区间元组列表。
-    """
-    return [missing_list[i:i+interval_length] for i in range(0, len(missing_list), interval_length)]
-
-
-def generate_payload_for_missing_NFT(missing_list, contractAddress) -> dict:
-    """
-    生成负载，用于下载 missing_list 中的NFT
-    Args:
-        download_range (list): 要下载的个别NFT的列表
-        contractAddress (str): 要下载的合约地址
-
-        Returns:
-            dict: 负载
-    """
-    tokens = []
-    for index in missing_list:
-        tokens.append({
-            "contractAddress": contractAddress,
-            "tokenId": str(index)
-        })
-    payload = {
-        "tokens": tokens,
-        "refreshCache": True
-    }
-    return payload
-
-def generate_payload_for_missing_NFT_by_V4_byNFTScan(missing_list, contractAddress) -> dict:
-    """
-    生成负载，用于下载 missing_list 中的NFT
-    Args:
-        download_range (list): 要下载的个别NFT的列表
-        contractAddress (str): 要下载的合约地址
-
-        Returns:
-            dict: 负载
-    """
-    tokens = []
-    for index in missing_list:
-        tokens.append({
-            'contract_address': contractAddress,
-            'token_id': str(index)
-        })
-    payload = {
-        'show_attribute': 'true',
-        'contract_address_with_token_id_list': tokens
-    }
-    return payload
-
-def payload_factory_for_missing_NFT(missing_list, contractAddress, interval_length=80) -> list:
-    """负载生成器，用于missing_list 中的NFT
-
-    Args:
-        missing_list (list): 要下载的NFT组成的编号列表
-        contractAddress (_type_): 要下载NFT的合约地址
-
-    Returns:
-        list: 负载列表
-    """
-
-    task_list = create_tasks_for_missing_nft(missing_list, interval_length)
-    payload_list = []
-    for task in task_list:
-        payload_body = generate_payload_for_missing_NFT(task, contractAddress)
-        payload_list.append(payload_body)
-    return payload_list
-
-def payload_factory_for_missing_NFT_V4_byNFTScan(missing_list, contractAddress, interval_length=80) -> list:
-    """负载生成器，用于missing_list 中的NFT
-
-    Args:
-        missing_list (list): 要下载的NFT组成的编号列表
-        contractAddress (_type_): 要下载NFT的合约地址
-
-    Returns:
-        list: 负载列表
-    """
-
-    task_list = create_tasks_for_missing_nft(missing_list, interval_length)
-    payload_list = []
-    for task in task_list:
-        payload_body = generate_payload_for_missing_NFT_by_V4_byNFTScan(task, contractAddress)
-        payload_list.append(payload_body)
-    return payload_list
-
 def get_start_file_index(contract_address) -> int:
     
     """
@@ -333,6 +167,7 @@ def get_start_file_index(contract_address) -> int:
 
 
 def get_media_format(url: str) -> str:
+
     """
     获取文件格式，如果文件名包含常见文件扩展名则返回该扩展名
     
@@ -354,3 +189,99 @@ def get_media_format(url: str) -> str:
                     return fmt
     else:
         return None
+
+
+def get_target_collection_info(contract_address: str, chain_type = "ethereum") -> dict:
+    """
+    获取目标NFT项目的信息
+
+    Args:
+        contract_address (str): NFT项目的合约地址
+        chain_type (str): 区块链类型
+
+    Returns:
+        dict: 返回NFT项目的信息
+    """
+
+    # 首先统一区块链类型，将名字转为小写
+    chain_type = chain_type.lower()
+
+    # 如果是以太坊链，使用Alchemy API
+    if chain_type == "ethereum":
+        api = get_api("Alchemy")
+        url = f"https://eth-mainnet.g.alchemy.com/nft/v3/{api}/getNFTMetadataBatch"
+
+        payload = {
+            "tokens": [
+                {
+                    "contractAddress": contract_address,
+                    "tokenId": "0"
+                },
+                {
+                    "contractAddress": contract_address,
+                    "tokenId": "1"
+                }
+            ],
+            "refreshCache": True
+        }
+        headers = get_headers()
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code == 200:
+            response_body = json.loads(response.text)
+
+            # 得到项目的起始文件编号
+            if response_body["nfts"][0]["raw"].get("error") is None:
+                start_index = 0
+            else:
+                start_index = 1
+            collection_info = response_body["nfts"][1]
+
+            NFT_name = collection_info["contract"].get("name")
+            total_supply = collection_info["contract"].get("totalSupply")
+            token_Type = collection_info["contract"].get("tokenType")
+            demo_media_url = collection_info["image"].get("cachedUrl")
+            candidate_format = get_media_format(demo_media_url)
+
+    # 使用NFTGo API
+    else:
+        url = f"https://data-api.nftgo.io/{chain_type}/v1/nft/infos"
+        payload = { "params": [
+                {
+                    "contract_address": contract_address,
+                    "token_id": "0"
+                },
+                {
+                    "contract_address": contract_address,
+                    "token_id": "1"
+                }
+            ] }
+        headers = get_headers()
+        headers.update({"X-API-KEY": get_api("NFTGo")})
+
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code == 200:
+            response_body = json.loads(response.text)
+            if len(response_body) == 0:
+                # 代表没有查到相关信息
+                return None
+            elif len(response_body) == 1:
+                start_index = 1
+            else:
+                start_index = 0
+            demo_media_url = response_body[0].get("image")
+            candidate_format = get_media_format(demo_media_url)
+            collection_info = response_body[0].get("collection")
+            NFT_name = collection_info["name"]
+            token_Type = collection_info["contract_type"]
+            total_supply = collection_info["total_supply"]
+        else: 
+            return None
+
+    return {
+        "NFT_name": NFT_name,
+        "contract_address": contract_address,
+        "total_supply": total_supply,
+        "token_Type": token_Type,
+        "candidate_format": candidate_format,
+        "start_index": start_index
+    }

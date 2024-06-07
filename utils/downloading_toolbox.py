@@ -785,3 +785,98 @@ class Add_Unreleased_NFT_metadata(Add_Unreleased_NFT):
         else:
             print(f"Failed to download. Status code: {response.status_code}")
 
+
+
+# 针对缺少的NFT下载器类
+def create_tasks_for_missing_nft(missing_list: list[int], interval_length: int = 50) -> list[list[int]]:
+    """
+    使用给定的间隔和结束值将 missing_list 划分为子列表。
+
+    Args:
+    :param interval_length: 区间值，整数。
+    :param missing_list: 结束值，整数。
+
+    :return: 一个区间元组列表。
+    """
+    return [missing_list[i:i+interval_length] for i in range(0, len(missing_list), interval_length)]
+
+
+def generate_payload_for_missing_NFT(missing_list, contractAddress) -> dict:
+    """
+    生成负载，用于下载 missing_list 中的NFT
+    Args:
+        download_range (list): 要下载的个别NFT的列表
+        contractAddress (str): 要下载的合约地址
+
+        Returns:
+            dict: 负载
+    """
+    tokens = []
+    for index in missing_list:
+        tokens.append({
+            "contractAddress": contractAddress,
+            "tokenId": str(index)
+        })
+    payload = {
+        "tokens": tokens,
+        "refreshCache": True
+    }
+    return payload
+
+def generate_payload_for_missing_NFT_by_V4_byNFTScan(missing_list, contractAddress) -> dict:
+    """
+    生成负载，用于下载 missing_list 中的NFT
+    Args:
+        download_range (list): 要下载的个别NFT的列表
+        contractAddress (str): 要下载的合约地址
+
+        Returns:
+            dict: 负载
+    """
+    tokens = []
+    for index in missing_list:
+        tokens.append({
+            'contract_address': contractAddress,
+            'token_id': str(index)
+        })
+    payload = {
+        'show_attribute': 'true',
+        'contract_address_with_token_id_list': tokens
+    }
+    return payload
+
+def payload_factory_for_missing_NFT(missing_list, contractAddress, interval_length=80) -> list:
+    """负载生成器，用于missing_list 中的NFT
+
+    Args:
+        missing_list (list): 要下载的NFT组成的编号列表
+        contractAddress (_type_): 要下载NFT的合约地址
+
+    Returns:
+        list: 负载列表
+    """
+
+    task_list = create_tasks_for_missing_nft(missing_list, interval_length)
+    payload_list = []
+    for task in task_list:
+        payload_body = generate_payload_for_missing_NFT(task, contractAddress)
+        payload_list.append(payload_body)
+    return payload_list
+
+def payload_factory_for_missing_NFT_V4_byNFTScan(missing_list, contractAddress, interval_length=80) -> list:
+    """负载生成器，用于missing_list 中的NFT
+
+    Args:
+        missing_list (list): 要下载的NFT组成的编号列表
+        contractAddress (_type_): 要下载NFT的合约地址
+
+    Returns:
+        list: 负载列表
+    """
+
+    task_list = create_tasks_for_missing_nft(missing_list, interval_length)
+    payload_list = []
+    for task in task_list:
+        payload_body = generate_payload_for_missing_NFT_by_V4_byNFTScan(task, contractAddress)
+        payload_list.append(payload_body)
+    return payload_list
