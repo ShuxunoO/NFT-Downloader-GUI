@@ -6,7 +6,9 @@ import requests
 import utils.file_io as fio
 
 
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from source.CONST_ENV import CONST_ENV as ENV
 
 def get_api(key_type: str) -> str:
@@ -20,8 +22,8 @@ def get_api(key_type: str) -> str:
             str: API密钥
     """
     # 加载api key
-    api_keys = fio.load_json(os.path.join(ENV.INFO_PATH, "api_keys.json"))
-    api = api_keys["key_type"]
+    api_keys = fio.load_json(ENV.API_KEYS_PATH)
+    api = api_keys[key_type]
     if type(api) == list:
         return random.choice(api)
     else:

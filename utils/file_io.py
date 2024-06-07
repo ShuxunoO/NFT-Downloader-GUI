@@ -26,7 +26,7 @@ def save_json(file_path, data):
     """
 
     with open(file_path, 'w', encoding='UTF-8') as file:
-        json.dump(data, file, ensure_ascii=False, indent=4, separators=(',', ' '))
+        json.dump(data, file, ensure_ascii=False, indent=4, separators=(',', ': '))
 
 
 def load_json(json_path):

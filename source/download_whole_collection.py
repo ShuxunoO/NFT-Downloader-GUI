@@ -18,7 +18,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import utils.file_io as fio
 import utils.spider_toolbox as stb
-from utils.downloading_toolbox import NFT_Downloader_for_Whole_Collection
+from utils.downloading_toolbox import NFT_Downloader_for_Whole_Collection_Alchemy
 from CONST_ENV import CONST_ENV as ENV
 
 from pathlib import Path
@@ -56,7 +56,7 @@ def get_target_collection_info(chain_type, contract_address) -> dict:
         "contract_address": contract_address,
         "NFT_name": "",
         "total_supply": 1000,
-        "candidate_format": "png",
+        "candidate_format": ".png",
         "get_start_file_index": 0
     }
 
@@ -65,8 +65,13 @@ def get_target_collection_info(chain_type, contract_address) -> dict:
 
 if __name__ == "__main__":
 
-    NFT_downloader = NFT_Downloader_for_Whole_Collection(chain_type="Ethereum",
-                                                        contract_address="0x495f947276749ce646f68ac8c248420045cb7b5e",
-                                                        save_path=ENV.DATASET_PATH,
-                                                        process_num=8)
+    NFT_downloader = NFT_Downloader_for_Whole_Collection_Alchemy(chain_type="Ethereum",
+                                                        NFT_name= "BoredApeYachtClub",
+                                                        contract_address="0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d",
+                                                        total_supply=10000,
+                                                        interval_length=3,
+                                                        candidate_format=".png",
+                                                        process_num=1,
+                                                        thread_num=3,
+                                                        save_path=ENV.DATASET_PATH)
     NFT_downloader.download_media_and_metadata()

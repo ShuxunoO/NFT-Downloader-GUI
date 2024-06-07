@@ -171,3 +171,4 @@ test/*
 
 # 忽略所有的log文件
 *.log
+.vscode/
