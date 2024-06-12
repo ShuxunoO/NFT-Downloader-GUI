@@ -276,9 +276,19 @@ def get_target_collection_info(contract_address: str, chain_type = "ethereum") -
             total_supply = collection_info["total_supply"]
         else: 
             return None
+    if total_supply is None:
+        # 如果没有查到总供应量，则默认为10000
+        total_supply = 10000
+    # 将供应量转为整数
+    total_supply = int(total_supply)
+
+    if candidate_format is None:
+        # 如果没有查到文件格式，则默认为".png"
+        candidate_format = ".png"
 
     return {
         "NFT_name": NFT_name,
+        "chain_type": chain_type,
         "contract_address": contract_address,
         "total_supply": total_supply,
         "token_Type": token_Type,

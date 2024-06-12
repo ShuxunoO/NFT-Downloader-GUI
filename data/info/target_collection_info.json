@@ -1,0 +1,11 @@
+{
+    "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d": {
+        "NFT_name": "BoredApeYachtClub",
+        "chain_type": "ethereum",
+        "contract_address": "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d",
+        "total_supply": 10000,
+        "token_Type": "ERC721",
+        "candidate_format": ".png",
+        "start_index": 0
+    }
+}

@@ -42,36 +42,36 @@ def remove_special_char(string):
 
 
 
-def get_target_collection_info(chain_type, contract_address) -> dict:
-    """获取目标NFT项目的信息
+def filter_valid_keys(data, valid_keys):
+    """ 过滤字典中的有效键 """
+    return {k: v for k, v in data.items() if k in valid_keys}
 
-    Args:
-        ranking (int): NFT项目的排名
 
-    Returns:
-        dict: 返回NFT项目的信息
-    """
-    info_dict = {
-        "chain_type": chain_type,
-        "contract_address": contract_address,
-        "NFT_name": "",
-        "total_supply": 1000,
-        "candidate_format": ".png",
-        "get_start_file_index": 0
-    }
 
 
 
 
 if __name__ == "__main__":
 
-    NFT_downloader = NFT_Downloader_for_Whole_Collection_Alchemy(chain_type="Ethereum",
-                                                        NFT_name= "BoredApeYachtClub",
-                                                        contract_address="0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d",
-                                                        total_supply=10000,
-                                                        interval_length=3,
-                                                        candidate_format=".png",
-                                                        process_num=1,
-                                                        thread_num=3,
-                                                        save_path=ENV.DATASET_PATH)
+    chain_type = "ethereum"
+    contract_address = "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"
+
+    target_collection_info = fio.load_json(ENV.INFO_PATH / "target_collection_info.json")
+    if target_collection_info is None:
+        # 创建文件并保存
+        collection_info = stb.get_target_collection_info(chain_type= chain_type, contract_address= contract_address)
+        collection_info_json = {contract_address: collection_info}
+        fio.save_json(ENV.INFO_PATH / "target_collection_info.json", collection_info_json)
+
+    elif target_collection_info.get(contract_address) is None:
+        # 更新文件并保存
+        collection_info = stb.get_target_collection_info(chain_type= chain_type, contract_address= contract_address)
+        target_collection_info[contract_address] = collection_info
+        fio.save_json(ENV.INFO_PATH / "target_collection_info.json", target_collection_info)
+    else:
+        collection_info = target_collection_info[contract_address]
+
+    # 将NFT项目的信息传入下载器中，开始下载
+    arg_dict = filter_valid_keys(collection_info, valid_keys={'NFT_name', 'chain_type', 'contract_address', 'total_supply', 'candidate_format', 'start_index'})
+    NFT_downloader = NFT_Downloader_for_Whole_Collection_Alchemy(**arg_dict, save_path=ENV.DATASET_PATH)
     NFT_downloader.download_media_and_metadata()

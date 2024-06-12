@@ -146,8 +146,8 @@ class NFT_Downloader_for_Whole_Collection_Alchemy(NFT_Downloader_for_Whole_Colle
                 contract_address: str,
                 candidate_format: str,
                 save_path: str,
-                process_num = 8,
-                thread_num = 10,
+                process_num = 4,
+                thread_num = 5,
                 total_supply = 10000,
                 start_index = 0,
                 interval_length = 80):
