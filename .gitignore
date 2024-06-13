@@ -172,3 +172,6 @@ test/*
 # 忽略所有的log文件
 *.log
 .vscode/
+
+#忽略本地的NFT信息文件
+data/info/target_collection_info.json
