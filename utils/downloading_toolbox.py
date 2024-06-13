@@ -226,7 +226,11 @@ class NFT_Downloader_for_Whole_Collection_Alchemy(NFT_Downloader_for_Whole_Colle
                 # 解析metadata资源
                 """
                 {
-                    "tokenId": {
+                    "tokenId_1": {
+                        "raw": metadata,
+                        "tokenUri": tokenUri
+                    },
+                    "tokenId_2": {
                         "raw": metadata,
                         "tokenUri": tokenUri
                     },
@@ -250,7 +254,11 @@ class NFT_Downloader_for_Whole_Collection_Alchemy(NFT_Downloader_for_Whole_Colle
                 # 将媒体资源统一成一种通用的表达方式
                 """
                 {
-                    "tokenId": {
+                    "tokenId_1": {
+                        "source_list": [url1, url2, url3, ...],
+                        "format": ".png"
+                },
+                    "tokenId_2": {
                         "source_list": [url1, url2, url3, ...],
                         "format": ".png"
                 },
@@ -271,7 +279,9 @@ class NFT_Downloader_for_Whole_Collection_Alchemy(NFT_Downloader_for_Whole_Colle
                 temp_format = image.get("contentType", None)
                 if temp_format == None:
                     format = self.candidate_format
-                elif temp_format == "svg+xml":
+                
+                # 如果文件类型中出现svg+xml，将其转换为.svg
+                elif "svg+xml" in temp_format:
                     format = ".svg"
                 else:
                     format = f".{temp_format.split('/')[-1]}"
@@ -709,7 +719,7 @@ class Add_Unreleased_NFT(object):
             # 等待所有线程完成
             executor.shutdown(wait=True)
 
-# https://ipfs.io/ipfs/bafybeib6rkqikdf7czbrtzjphk5k6cdi44smd5ewwc3ysihwr3g2onpwl4/3.png
+    # https://ipfs.io/ipfs/bafybeib6rkqikdf7czbrtzjphk5k6cdi44smd5ewwc3ysihwr3g2onpwl4/3.png
 
     def single_worker(self, url) -> None:
         """

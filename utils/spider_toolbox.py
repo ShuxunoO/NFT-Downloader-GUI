@@ -286,6 +286,9 @@ def get_target_collection_info(contract_address: str, chain_type = "ethereum") -
         # 如果没有查到文件格式，则默认为".png"
         candidate_format = ".png"
 
+    if candidate_format == ".svg+xml":
+        candidate_format = ".svg"
+
     return {
         "NFT_name": NFT_name,
         "chain_type": chain_type,

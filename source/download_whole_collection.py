@@ -42,8 +42,9 @@ def remove_special_char(string):
 
 
 
-def filter_valid_keys(data, valid_keys):
+def filter_valid_keys(data):
     """ 过滤字典中的有效键 """
+    valid_keys={'NFT_name', 'chain_type', 'contract_address', 'total_supply', 'candidate_format', 'start_index'}
     return {k: v for k, v in data.items() if k in valid_keys}
 
 
@@ -54,7 +55,7 @@ def filter_valid_keys(data, valid_keys):
 if __name__ == "__main__":
 
     chain_type = "ethereum"
-    contract_address = "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"
+    contract_address = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb"
 
     target_collection_info = fio.load_json(ENV.INFO_PATH / "target_collection_info.json")
     if target_collection_info is None:
@@ -72,6 +73,6 @@ if __name__ == "__main__":
         collection_info = target_collection_info[contract_address]
 
     # 将NFT项目的信息传入下载器中，开始下载
-    arg_dict = filter_valid_keys(collection_info, valid_keys={'NFT_name', 'chain_type', 'contract_address', 'total_supply', 'candidate_format', 'start_index'})
+    arg_dict = filter_valid_keys(collection_info)
     NFT_downloader = NFT_Downloader_for_Whole_Collection_Alchemy(**arg_dict, save_path=ENV.DATASET_PATH)
     NFT_downloader.download_media_and_metadata()

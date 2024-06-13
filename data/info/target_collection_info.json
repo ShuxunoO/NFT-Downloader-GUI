@@ -7,5 +7,14 @@
         "token_Type": "ERC721",
         "candidate_format": ".png",
         "start_index": 0
+    },
+    "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb": {
+        "NFT_name": "CRYPTOPUNKS",
+        "chain_type": "ethereum",
+        "contract_address": "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb",
+        "total_supply": 10000,
+        "token_Type": "ERC721",
+        "candidate_format": ".svg",
+        "start_index": 0
     }
 }
