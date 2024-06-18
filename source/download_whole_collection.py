@@ -53,8 +53,8 @@ def filter_valid_keys(data):
 if __name__ == "__main__":
 
     chain_type = "ethereum"
-    # contract_address = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb"
-    contract_address = "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"
+    contract_address = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb"
+    # contract_address = "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"
 
     target_collection_info = fio.load_json(ENV.INFO_PATH / "target_collection_info.json")
     if target_collection_info is None:

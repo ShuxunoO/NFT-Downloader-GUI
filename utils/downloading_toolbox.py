@@ -134,7 +134,6 @@ class NFT_Downloader_for_Whole_Collection(NFT_Downloader):
         for source_url in value["source_list"]:
             file_path = base_path.joinpath(f"{key}{value['format']}")
             # 如果是IPFS资源，则使用IPFS专用的下载方法 
-            print(f"source_url: {source_url}")
             if CID := is_ipfs_cid(source_url):
                 download_success = download_from_IPFS(CID, file_path)
                 if download_success:
@@ -174,8 +173,8 @@ class NFT_Downloader_for_Whole_Collection(NFT_Downloader):
         file_path = base_path.joinpath(f"{key}.json")
 
         # 如果raw字段里存在metadata，直接保存
-        if value["raw"].get("metadata", None):
-            fio.save_json(file_path, value["raw"]["metadata"])
+        if value.get("raw", None):
+            fio.save_json(file_path, value["raw"])
             print(f"{self.NFT_name} {file_path.name} saved successfully.")
 
         # 如果tokenUri字段不为空，下载tokenUri指向的json文件
@@ -281,7 +280,7 @@ class NFT_Downloader_for_Whole_Collection_Alchemy(NFT_Downloader_for_Whole_Colle
                 # 启动多进程同时进行两个任务
                 metadata_source = response_data["metadata_source"]
                 media_source = response_data["media_source"]
-                # self.metadata_downloader(metadata_source = metadata_source)
+                self.metadata_downloader(metadata_source = metadata_source)
                 self.media_downloader(media_source = media_source)
 
             else:
@@ -435,7 +434,7 @@ class NFT_Downloader_for_Whole_Collection_NFTScan(NFT_Downloader_for_Whole_Colle
                 # 启动多进程同时进行两个任务
                 metadata_source = response_data["metadata_source"]
                 media_source = response_data["media_source"]
-                self.metadata_downloader(metadata_source = metadata_source)
+                # self.metadata_downloader(metadata_source = metadata_source)
                 self.media_downloader(media_source = media_source)
 
                 # 更新游标
@@ -509,7 +508,7 @@ class NFT_Downloader_for_Whole_Collection_NFTScan(NFT_Downloader_for_Whole_Colle
 
                 """
                 source_list = []
-                # source_list.append(NFT_item.get("content_uri", None))
+                source_list.append(NFT_item.get("content_uri", None))
                 source_list.append(NFT_item.get("image_uri", None))
                 source_list.append(NFT_item.get("nftscan_uri", None))
                 source_list.append(NFT_item.get("small_nftscan_uri", None))
