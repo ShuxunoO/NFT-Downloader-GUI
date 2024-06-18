@@ -24,7 +24,7 @@ def get_api(key_type: str) -> str:
     # 加载api key
     api_keys = fio.load_json(ENV.API_KEYS_PATH)
     api = api_keys[key_type]
-    if type(api) == list:
+    if key_type == "Alchemy":
         return random.choice(api)
     else:
         return api

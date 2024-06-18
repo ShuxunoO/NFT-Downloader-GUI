@@ -18,7 +18,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import utils.file_io as fio
 import utils.spider_toolbox as stb
-from utils.downloading_toolbox import NFT_Downloader_for_Whole_Collection_Alchemy
+import utils.downloading_toolbox as dtb
 from CONST_ENV import CONST_ENV as ENV
 
 from pathlib import Path
@@ -50,12 +50,11 @@ def filter_valid_keys(data):
 
 
 
-
-
 if __name__ == "__main__":
 
     chain_type = "ethereum"
-    contract_address = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb"
+    # contract_address = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb"
+    contract_address = "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"
 
     target_collection_info = fio.load_json(ENV.INFO_PATH / "target_collection_info.json")
     if target_collection_info is None:
@@ -74,5 +73,7 @@ if __name__ == "__main__":
 
     # 将NFT项目的信息传入下载器中，开始下载
     arg_dict = filter_valid_keys(collection_info)
-    NFT_downloader = NFT_Downloader_for_Whole_Collection_Alchemy(**arg_dict, save_path=ENV.DATASET_PATH)
+    # NFT_downloader = dtb.NFT_Downloader_for_Whole_Collection_Alchemy(**arg_dict, save_path=ENV.DATASET_PATH)
+    # NFT_downloader.download_media_and_metadata()
+    NFT_downloader = dtb.NFT_Downloader_for_Whole_Collection_NFTScan(**arg_dict, save_path=ENV.DATASET_PATH)
     NFT_downloader.download_media_and_metadata()
