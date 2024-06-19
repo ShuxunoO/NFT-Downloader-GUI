@@ -7,7 +7,7 @@ import random
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from urllib.request import Request, urlopen
+import urllib
 from abc import ABC, abstractmethod
 from pathlib import Path
 import re
@@ -77,7 +77,7 @@ class PayloadFactory:
         :return: 一个区间元组列表。
         """
         return [missing_list[i:i+self.interval_length] for i in range(0, len(missing_list), self.interval_length)]
-    
+
 
 # 定义一个NFT下载器类的通用接口类，使用不同平台的下载器类继承这个接口类
 class NFT_Downloader(ABC):
@@ -229,9 +229,9 @@ class NFT_Downloader_for_Whole_Collection(NFT_Downloader):
         file_path = base_path.joinpath(f"{key}.json")
 
         # 如果raw字段里存在metadata，直接保存
-        if metadata := value.get("raw", None):
+        if metadata := value.get('raw', None):
             # 将数据格式化成json格式保存
-            fio.save_json(file_path, json.loads(metadata))
+            fio.save_json(file_path, metadata)
             print(f"{self.NFT_name} {file_path.name} saved successfully.")
 
         # 如果tokenUri字段不为空，下载tokenUri指向的json文件
@@ -247,7 +247,6 @@ class NFT_Downloader_for_Whole_Collection(NFT_Downloader):
                 print(f"Error downloading metadata {key} from {value['tokenUri']}: {e}")
         else:
             print(f"None exits valid metadata for {file_path.name}.")
-
 
 
 # 基于Alchemy V3 API的NFT下载器类
@@ -587,7 +586,12 @@ class NFT_Downloader_for_Whole_Collection_NFTScan(NFT_Downloader_for_Whole_Colle
         metadata_dict["media_source"] = media_source
         return metadata_dict
 
-class NFT_Downloader_for_Whole_Collection_OpenSea(NFT_Downloader_for_Whole_Collection):
+
+class NFT_Downloader_for_Whole_Collection_NFTGo(NFT_Downloader_for_Whole_Collection):
+    """
+    基于NFTGo API的NFT下载器类，完整下载一整个NFT项目
+    详细细节参考：https://docs.nftgo.io/v2.0/reference/get_nfts_by_contract__chain__v1_collection__contract_address__nfts_get
+    """
 
     def __init__(self,
                 chain_type: str,
@@ -604,7 +608,165 @@ class NFT_Downloader_for_Whole_Collection_OpenSea(NFT_Downloader_for_Whole_Colle
         super().__init__(chain_type, NFT_name, contract_address, candidate_format, save_path, process_num, thread_num, total_supply, start_index, interval_length)
 
         # 设置请求参数模板
-        self.params_template = f"https://api.opensea.io/api/v2/chain/ethereum/contract/{contract_address}/nfts?limit={interval_length}"
+        self.url_template = f"https://data-api.nftgo.io/{chain_type}/v1/collection/{contract_address}/nfts?limit={interval_length}"
+
+    def download_media_and_metadata(self):
+        # 创建保存图片和metadata的文件夹
+        img_path = self.save_path.joinpath(f"{self.NFT_name}/img")
+        metadata_path = self.save_path.joinpath(f"{self.NFT_name}/metadata")
+        fio.check_dir(img_path)
+        fio.check_dir(metadata_path)
+
+        headers = stb.get_headers()
+        headers.update({"X-API-KEY": stb.get_api("NFTGo")})
+        print(f"\n**********  ## {self.NFT_name} ## Start downloading... **********\n")
+
+        response = requests.get(self.url_template, headers=headers)
+        # 因为openSea的响应数据中不存在文件格式，为了保证opensea数据格式的一致性，需要做文件格式的更新
+        demo_img_url = response.json()["nfts"][0].get("image", None)
+        if demo_img_url:
+            fmt = stb.get_media_format(demo_img_url)
+            if fmt:
+                self.candidate_format = fmt
+        try:
+            while(next_cursor := response.json().get("next_cursor")):
+                # 解析数据
+                response_data = self.parse_response(response)
+                # 启动多进程同时进行两个任务
+                metadata_source = response_data["metadata_source"]
+                media_source = response_data["media_source"]
+                self.metadata_downloader(metadata_source = metadata_source)
+                self.media_downloader(media_source = media_source)
+
+                # 更新游标
+                # 在链接模版的“nfts?后面插入cursor参数
+                url = re.sub(r"(nfts\?)", r"\1cursor={}&".format(next_cursor), self.url_template)
+                response = requests.get(url, headers = headers)
+
+            print(f"\n**********  ## {self.NFT_name} ## Download successfully! **********\n")
+            return True
+
+        except Exception as e:
+            print(f"Error downloading: {self.NFT_name} Process startup failed: {e}\n")
+            return False
+
+
+    def parse_response(self, response):
+        """
+        从响应中解析数据。
+
+        Args:
+            response (Http response): HTTP响应数据
+
+        Returns:
+            dict: 返回解析后的数据，包括metadata资源和media资源
+        """
+        metadata_dict = {}
+        metadata_source = {}
+        media_source = {}
+
+        NFT_list = response.json().get("nfts", [])
+        for NFT_item in NFT_list:
+            # 转换成字典
+            try:
+                tokenId = NFT_item.get("token_id")
+
+                # 解析metadata资源
+                """
+                {
+                    "tokenId_1": {
+                        "raw": metadata,
+                        "tokenUri": tokenUri
+                    },
+                    "tokenId_2": {
+                        "raw": metadata,
+                        "tokenUri": tokenUri
+                    },
+                    ……
+                }
+                
+                
+                """
+                # 构造一个人造的metadata资源
+
+                """
+                一点学习心得：
+
+                    a = None
+                    if b := a:
+                        print(b)
+
+                    print(b)
+                
+                    变量 b 的作用域：在使用赋值表达式时，变量 b 被定义在赋值表达式所在的块级作用域之外。
+                    在这种情况下，b 被定义在 if 语句的外部，使得它在 if 块之外也是可见的。
+                
+                """
+
+                if attributes := NFT_item.get("traits", None):
+                        attributes = {"attributes": attributes}
+                metadata_source[tokenId] = {
+                    "raw" : attributes,
+                    "tokenUri" : NFT_item.get("metadata_url", None)
+                    }
+
+                # 解析media资源
+                # 将媒体资源统一成一种通用的表达方式
+                """
+                {
+                    "tokenId_1": {
+                        "source_list": [url1, url2, url3, ...],
+                        "format": ".png"
+                },
+                    "tokenId_2": {
+                        "source_list": [url1, url2, url3, ...],
+                        "format": ".png"
+                },
+                ……
+
+                }
+                
+
+                """
+                source_list = [NFT_item.get("image", None)]
+                # 解析文件格式
+                temp_format = NFT_item.get("content_type", None)
+                media_format = parse_file_format(temp_format, self.candidate_format)
+                media_source[tokenId] = {"source_list": source_list,
+                                        "format": media_format}
+
+            except Exception as e:
+                # 抛出异常，跳过这个NFT
+                print(f"Response parsing exception: {e}. Skipping")
+                continue
+
+        metadata_dict["metadata_source"] = metadata_source
+        metadata_dict["media_source"] = media_source
+        return metadata_dict
+
+
+class NFT_Downloader_for_Whole_Collection_OpenSea(NFT_Downloader_for_Whole_Collection):
+
+    """
+    基于OpenSea API的NFT下载器类，完整下载一整个NFT项目
+    详细细节参考：https://docs.opensea.io/reference/list_nfts_by_contract
+    """
+    def __init__(self,
+                chain_type: str,
+                NFT_name: str,
+                contract_address: str,
+                candidate_format: str,
+                save_path: str,
+                process_num = 1,
+                thread_num = 3,
+                total_supply = 10000,
+                start_index = 0,
+                interval_length = 3):
+
+        super().__init__(chain_type, NFT_name, contract_address, candidate_format, save_path, process_num, thread_num, total_supply, start_index, interval_length)
+
+        # 设置请求参数模板
+        self.url_template = f"https://api.opensea.io/api/v2/chain/{self.chain_type}/contract/{contract_address}/nfts?limit={interval_length}"
 
     def download_media_and_metadata(self):
         # 创建保存图片和metadata的文件夹
@@ -617,11 +779,11 @@ class NFT_Downloader_for_Whole_Collection_OpenSea(NFT_Downloader_for_Whole_Colle
         headers.update({"x-api-key": stb.get_api("OpenSea")})
         print(f"\n**********  ## {self.NFT_name} ## Start downloading... **********\n")
 
-        response = requests.get(url, headers=headers)
+        response = requests.get(self.url_template, headers=headers)
         # 因为openSea的响应数据中不存在文件格式，为了保证opensea数据格式的一致性，需要做文件格式的更新
         demo_img_url = response.json()["nfts"][0].get("image_url", None)
         if demo_img_url:
-            fmt = stb.get_file_format(demo_img_url)
+            fmt = stb.get_media_format(demo_img_url)
             if fmt:
                 self.candidate_format = fmt
         try:
@@ -637,8 +799,8 @@ class NFT_Downloader_for_Whole_Collection_OpenSea(NFT_Downloader_for_Whole_Colle
                 # 更新游标
                 # 将 Base64 编码的字符串转换为 URL 编码的字符串
                 next_cursor = urllib.parse.quote(next_cursor)
-                url = self.params_template + f"&next={next_cursor}"
-                response = requests.get(url, headers=headers, params=self.params_template)
+                url = self.url_template + f"&next={next_cursor}"
+                response = requests.get(url, headers = headers)
 
             print(f"\n**********  ## {self.NFT_name} ## Download successfully! **********\n")
             return True

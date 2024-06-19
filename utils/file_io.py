@@ -24,7 +24,9 @@ def save_json(file_path, data):
         :param data: The data to be saved
 
     """
-
+    # 如果data是字符串，转换为字典
+    if isinstance(data, str):
+        data = json.loads(data)
     with open(file_path, 'w', encoding='UTF-8') as file:
         json.dump(data, file, ensure_ascii=False, indent=4, separators=(',', ': '))
 
