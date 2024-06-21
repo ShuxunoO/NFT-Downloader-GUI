@@ -1,6 +1,3 @@
-import functools
-import io
-import json
 import multiprocessing as mp
 import os
 import random
@@ -11,7 +8,6 @@ import urllib
 from abc import ABC, abstractmethod
 from pathlib import Path
 import re
-
 
 import requests
 import utils.file_io as fio
@@ -96,10 +92,15 @@ class NFT_Downloader(ABC):
         self.NFT_name = NFT_name
         self.contract_address = contract_address
         self.candidate_format = candidate_format
-        self.save_path = Path(save_path)
+        self.base_path = Path(save_path)
+        self.base_media_path = self.base_path.joinpath(f"{self.chain_type}/{self.NFT_name}/img")
+        self.base_metadata_path = self.base_path.joinpath(f"{self.chain_type}/{self.NFT_name}/metadata")
         self.process_num = process_num
         self.thread_num = thread_num
         self.total_supply = total_supply
+        # 创建保存media和metadata的文件夹
+        fio.check_dir(self.base_media_path)
+        fio.check_dir(self.base_metadata_path)
 
 
     # 生成payload的抽象方法，生成不同平台的payload
@@ -142,6 +143,7 @@ class NFT_Downloader(ABC):
     def metadata_downloader_worker(self, *args, **kwargs) -> None:
         pass
 
+# 定义下载整个NFT项目的下载器类，继承自NFT_Downloader类，本质上还是个抽象类
 class NFT_Downloader_for_Whole_Collection(NFT_Downloader):
     
     def __init__(self,
@@ -160,11 +162,6 @@ class NFT_Downloader_for_Whole_Collection(NFT_Downloader):
         self.start_index = start_index
         self.interval_length = interval_length
 
-    # 本质上还是一个抽象方法
-    @abstractmethod
-    def download_media_and_metadata(self) -> None:
-        pass
-
     def media_downloader(self, media_source) -> None:
         # 启用多线程下载图片
         with ThreadPoolExecutor(max_workers=self.thread_num) as executor:
@@ -181,14 +178,13 @@ class NFT_Downloader_for_Whole_Collection(NFT_Downloader):
         """
 
         key, value = source_item
-        base_path = self.save_path.joinpath(f"{self.NFT_name}/img")
 
         download_success = False  # 用于标记是否成功下载
 
         # 遍历source_list中的所有链接，下载成功一次即退出
         for source_url in value["source_list"]:
             if source_url is not None:
-                file_path = base_path.joinpath(f"{key}{value['format']}")
+                file_path = self.base_media_path.joinpath(f"{key}{value['format']}")
                 # 如果是IPFS资源，则使用IPFS专用的下载方法 
                 if CID := is_ipfs_cid(source_url):
                     download_success = download_from_IPFS(CID, file_path)
@@ -225,8 +221,7 @@ class NFT_Downloader_for_Whole_Collection(NFT_Downloader):
             None:
         """
         key, value = source_item
-        base_path = self.save_path.joinpath(f"{self.NFT_name}/metadata")
-        file_path = base_path.joinpath(f"{key}.json")
+        file_path = self.base_metadata_path.joinpath(f"{key}.json")
 
         # 如果raw字段里存在metadata，直接保存
         if metadata := value.get('raw', None):
@@ -263,11 +258,11 @@ class NFT_Downloader_for_Whole_Collection_Alchemy(NFT_Downloader_for_Whole_Colle
                 contract_address: str,
                 candidate_format: str,
                 save_path: str,
-                process_num = 1,
-                thread_num = 1,
+                process_num = 4,
+                thread_num = 10,
                 total_supply = 10000,
                 start_index = 0,
-                interval_length = 3):
+                interval_length = 80):
 
         super().__init__(chain_type, NFT_name, contract_address, candidate_format, save_path, process_num, thread_num, total_supply, start_index, interval_length)
         # 生成下载资源payload list
@@ -294,12 +289,6 @@ class NFT_Downloader_for_Whole_Collection_Alchemy(NFT_Downloader_for_Whole_Colle
 
     # 下载全部的media和metadata资源
     def download_media_and_metadata(self):
-
-        # 创建保存图片和metadata的文件夹
-        img_path = self.save_path.joinpath(f"{self.NFT_name}/img")
-        metadata_path = self.save_path.joinpath(f"{self.NFT_name}/metadata")
-        fio.check_dir(img_path)
-        fio.check_dir(metadata_path)
 
         print(f"\n**********  ## {self.NFT_name} ## Start downloading... **********\n")
         # 启用进程池多进程下载
@@ -446,11 +435,11 @@ class NFT_Downloader_for_Whole_Collection_NFTScan(NFT_Downloader_for_Whole_Colle
                 contract_address: str,
                 candidate_format: str,
                 save_path: str,
-                process_num = 1,
-                thread_num = 3,
+                process_num = 4,
+                thread_num = 5,
                 total_supply = 10000,
                 start_index = 0,
-                interval_length = 3):
+                interval_length = 80):
 
         super().__init__(chain_type, NFT_name, contract_address, candidate_format, save_path, process_num, thread_num, total_supply, start_index, interval_length)
 
@@ -463,11 +452,7 @@ class NFT_Downloader_for_Whole_Collection_NFTScan(NFT_Downloader_for_Whole_Colle
                             }
 
     def download_media_and_metadata(self):
-                # 创建保存图片和metadata的文件夹
-        img_path = self.save_path.joinpath(f"{self.NFT_name}/img")
-        metadata_path = self.save_path.joinpath(f"{self.NFT_name}/metadata")
-        fio.check_dir(img_path)
-        fio.check_dir(metadata_path)
+
         if self.chain_type == "ethereum":
             url = f"https://restapi.nftscan.com/api/v2/assets/{self.contract_address}"
         else:
@@ -599,11 +584,11 @@ class NFT_Downloader_for_Whole_Collection_NFTGo(NFT_Downloader_for_Whole_Collect
                 contract_address: str,
                 candidate_format: str,
                 save_path: str,
-                process_num = 1,
-                thread_num = 3,
+                process_num = 4,
+                thread_num = 5,
                 total_supply = 10000,
                 start_index = 0,
-                interval_length = 3):
+                interval_length = 50):
 
         super().__init__(chain_type, NFT_name, contract_address, candidate_format, save_path, process_num, thread_num, total_supply, start_index, interval_length)
 
@@ -611,11 +596,6 @@ class NFT_Downloader_for_Whole_Collection_NFTGo(NFT_Downloader_for_Whole_Collect
         self.url_template = f"https://data-api.nftgo.io/{chain_type}/v1/collection/{contract_address}/nfts?limit={interval_length}"
 
     def download_media_and_metadata(self):
-        # 创建保存图片和metadata的文件夹
-        img_path = self.save_path.joinpath(f"{self.NFT_name}/img")
-        metadata_path = self.save_path.joinpath(f"{self.NFT_name}/metadata")
-        fio.check_dir(img_path)
-        fio.check_dir(metadata_path)
 
         headers = stb.get_headers()
         headers.update({"X-API-KEY": stb.get_api("NFTGo")})
@@ -757,11 +737,11 @@ class NFT_Downloader_for_Whole_Collection_OpenSea(NFT_Downloader_for_Whole_Colle
                 contract_address: str,
                 candidate_format: str,
                 save_path: str,
-                process_num = 1,
-                thread_num = 3,
+                process_num = 4,
+                thread_num = 5,
                 total_supply = 10000,
                 start_index = 0,
-                interval_length = 3):
+                interval_length = 80):
 
         super().__init__(chain_type, NFT_name, contract_address, candidate_format, save_path, process_num, thread_num, total_supply, start_index, interval_length)
 
@@ -769,11 +749,6 @@ class NFT_Downloader_for_Whole_Collection_OpenSea(NFT_Downloader_for_Whole_Colle
         self.url_template = f"https://api.opensea.io/api/v2/chain/{self.chain_type}/contract/{contract_address}/nfts?limit={interval_length}"
 
     def download_media_and_metadata(self):
-        # 创建保存图片和metadata的文件夹
-        img_path = self.save_path.joinpath(f"{self.NFT_name}/img")
-        metadata_path = self.save_path.joinpath(f"{self.NFT_name}/metadata")
-        fio.check_dir(img_path)
-        fio.check_dir(metadata_path)
 
         headers = stb.get_headers()
         headers.update({"x-api-key": stb.get_api("OpenSea")})
@@ -887,7 +862,6 @@ class NFT_Downloader_for_Whole_Collection_OpenSea(NFT_Downloader_for_Whole_Colle
         metadata_dict["metadata_source"] = metadata_source
         metadata_dict["media_source"] = media_source
         return metadata_dict
-
 
 
 # 解析文件格式

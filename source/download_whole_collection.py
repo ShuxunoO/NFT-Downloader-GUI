@@ -53,9 +53,9 @@ def filter_valid_keys(data):
 if __name__ == "__main__":
 
     chain_type = "ethereum"
-    contract_address = "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"
+    # contract_address = "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"
     # contract_address = "0xb47e3cd837ddf8e4c57f05d70ab865de6e193bbb"
-    # contract_address = "0x79fcdef22feed20eddacbb2587640e45491b757f"
+    contract_address = "0x79fcdef22feed20eddacbb2587640e45491b757f"
 
 
     target_collection_info = fio.load_json(ENV.INFO_PATH / "target_collection_info.json")
@@ -76,18 +76,18 @@ if __name__ == "__main__":
     # 将NFT项目的信息传入下载器中，开始下载
     arg_dict = filter_valid_keys(collection_info)
 
-    # Alchemy 测试
+    # # Alchemy 测试
     # NFT_downloader = dtb.NFT_Downloader_for_Whole_Collection_Alchemy(**arg_dict, save_path=ENV.DATASET_PATH)
     # NFT_downloader.download_media_and_metadata()
 
-    # NFTScan 测试
-    NFT_downloader = dtb.NFT_Downloader_for_Whole_Collection_NFTScan(**arg_dict, save_path=ENV.DATASET_PATH)
-    NFT_downloader.download_media_and_metadata()
+    # # NFTScan 测试
+    # NFT_downloader = dtb.NFT_Downloader_for_Whole_Collection_NFTScan(**arg_dict, save_path=ENV.DATASET_PATH)
+    # NFT_downloader.download_media_and_metadata()
 
     # # NFTGo 测试
     # NFT_downloader = dtb.NFT_Downloader_for_Whole_Collection_NFTGo(**arg_dict, save_path=ENV.DATASET_PATH)
     # NFT_downloader.download_media_and_metadata()
 
-    # # OpenSea 测试
-    # NFT_downloader = dtb.NFT_Downloader_for_Whole_Collection_NFTScan(**arg_dict, save_path=ENV.DATASET_PATH)
-    # NFT_downloader.download_media_and_metadata()
+    # OpenSea 测试
+    NFT_downloader = dtb.NFT_Downloader_for_Whole_Collection_NFTScan(**arg_dict, save_path=ENV.DATASET_PATH)
+    NFT_downloader.download_media_and_metadata()
