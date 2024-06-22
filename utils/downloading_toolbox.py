@@ -863,6 +863,9 @@ class NFT_Downloader_for_Whole_Collection_OpenSea(NFT_Downloader_for_Whole_Colle
         metadata_dict["media_source"] = media_source
         return metadata_dict
 
+def NFT_Downloader_for_Whole_Collection_IPFS():
+    # 使用终端命令下载整个collection中的所有图片
+    pass
 
 # 解析文件格式
 def parse_file_format(temp_format: str, candidate_format) -> str:
