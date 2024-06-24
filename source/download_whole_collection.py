@@ -5,15 +5,10 @@ to the given blockchain category and contract address
 
 """
 
-import json
-import multiprocessing as mp
-import os
-import random
-import time
-from concurrent.futures import ThreadPoolExecutor
-from urllib.request import Request, urlopen
 
-import requests
+import os
+
+
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import utils.file_io as fio

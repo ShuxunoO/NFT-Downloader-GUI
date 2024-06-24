@@ -17,7 +17,6 @@ from tqdm import tqdm
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from source.CONST_ENV import CONST_ENV as ENV
 
 # 用于生成payload的工厂类，可以根据需要生成不同的NFT资源payload
 class PayloadFactory:
@@ -77,6 +76,9 @@ class PayloadFactory:
 
 # 定义一个NFT下载器类的通用接口类，使用不同平台的下载器类继承这个接口类
 class NFT_Downloader(ABC):
+    """定义一个NFT下载器类的通用接口类，使用不同平台的下载器类继承这个接口类
+
+    """
 
     def __init__(self,  
                 chain_type: str,
@@ -87,6 +89,18 @@ class NFT_Downloader(ABC):
                 process_num: int,
                 thread_num: int,
                 total_supply: int):
+        """初始化NFT下载器
+
+        Args:
+            chain_type (str): 区块链类型，如ethereum, bsc等
+            NFT_name (str): NFT项目名称
+            contract_address (str): NFT项目合约地址
+            candidate_format (str): 候选媒体文件格式，如".png", ".jpg"等
+            save_path (str): 数据保存路径
+            process_num (int): 进程数
+            thread_num (int): 每个进程的线程数
+            total_supply (int): NFT项目的总供应量
+        """
 
         self.chain_type = chain_type
         self.NFT_name = NFT_name
