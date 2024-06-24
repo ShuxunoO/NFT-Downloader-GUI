@@ -174,4 +174,4 @@ test/*
 .vscode/
 
 #忽略本地的NFT信息文件
-data/info/target_collection_info.json
+data/info/ethereum_target_collection_info.json
