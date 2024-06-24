@@ -162,7 +162,7 @@ cython_debug/
 #.idea/
 
 
-# data/api_keys.json
+data/api_keys.json
 # 忽略test文件夹下的所有文件
 test/*
 # 忽略Dataset文件夹下的所有文件
