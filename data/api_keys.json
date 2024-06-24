@@ -1,0 +1,18 @@
+{
+    "Alchemy": [
+    ],
+
+    "IPFS_gateways": [
+        "https://ipfs.io/ipfs/",
+        "https://nftstorage.link/ipfs/",
+        "https://alchemy.mypinata.cloud/ipfs/",
+        "https://gateway.pinata.cloud/ipfs/",
+        "https://cloudflare-ipfs.com/ipfs/",
+        "https://4everland.io/ipfs/",
+        "https://dweb.link/ipfs/"
+    ],
+    "NFTGo": "",
+    "NFTScan": "",
+    "OpenSea": "",
+    "DUNE": ""
+}
